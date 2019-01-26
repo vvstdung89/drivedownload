@@ -1,7 +1,7 @@
 package drive
 
 import (
-	"github.com/vvstdung89/goutils/Lrucache"
+	"github.com/vvstdung89/goutils/lrucache"
 	"github.com/vvstdung89/goutils/resource_lock"
 	"sync"
 )
