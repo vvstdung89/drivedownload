@@ -1,4 +1,4 @@
-package goutils
+package cache
 
 import (
 	"bytes"
@@ -8,23 +8,23 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"time"
 )
+
 type Cache struct {
-	cache *lru.Cache
-	lvdb *leveldb.DB
+	cache      *lru.Cache
+	lvdb       *leveldb.DB
 	persistent bool
 }
 
-
 func Init(name string, size int, persistent bool) *Cache {
 	lruCache, _ := lru.New(size)
-	lvdb, err := leveldb.OpenFile("levelDB-"+name , nil)
+	lvdb, err := leveldb.OpenFile("levelDB-"+name, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &Cache{lruCache,lvdb,persistent}
+	return &Cache{lruCache, lvdb, persistent}
 }
 
-func (self *Cache) SaveCacheData(key string, data interface{},expire int64) error {
+func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
 	type CacheData struct {
 		Data   []byte
 		Expire int64
@@ -62,7 +62,7 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 	inMemCache := true
 	if buffer == nil {
 		if self.persistent == true {
-			res,_ := self.lvdb.Get([]byte(key), nil)
+			res, _ := self.lvdb.Get([]byte(key), nil)
 			if len(res) != 0 {
 				buffer = res
 				inMemCache = false
