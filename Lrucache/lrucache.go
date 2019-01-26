@@ -24,6 +24,13 @@ func Init(name string, size int, persistent bool) *Cache {
 	return &Cache{lruCache, lvdb, persistent}
 }
 
+func (self *Cache) remove(key string) {
+	self.cache.Remove(key)
+	if self.persistent == true {
+		self.lvdb.Delete([]byte(key), nil)
+	}
+}
+
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
 	type CacheData struct {
 		Data   []byte
