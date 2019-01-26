@@ -70,7 +70,7 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 	}
 	self.cache.Add(key, cachebuffer.Bytes())
 
-	if self.persistent == true {
+	if self.persistent == true && expire == 0 {
 		self.lvdb.Put([]byte(key), cachebuffer.Bytes(), nil)
 	}
 	return nil
