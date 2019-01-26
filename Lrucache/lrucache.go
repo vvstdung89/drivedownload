@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+type CacheData struct {
+	Data   []byte
+	Expire int64
+}
+
 type Cache struct {
 	cache      *lru.Cache
 	lvdb       *leveldb.DB
@@ -21,6 +26,21 @@ func Init(name string, size int, persistent bool) *Cache {
 	if err != nil {
 		panic(err)
 	}
+	//remove old item
+	//go func() {
+	//	for _ = range time.NewTicker(time.Minute * 30).C {
+	//		iter := lvdb.NewIterator(util.BytesPrefix([]byte("-")), nil)
+	//		for iter.Next() {
+	//			var cacheData CacheData
+	//			dec := gob.NewDecoder(bytes.NewReader(iter.Value()))
+	//			err = dec.Decode(&cacheData)
+	//			if cacheData.Expire <= time.Now().Add(-6*time.Hour).Unix() {
+	//				lvdb.Delete(iter.Key(), nil)
+	//			}
+	//		}
+	//		iter.Release()
+	//	}
+	//}()
 	return &Cache{lruCache, lvdb, persistent}
 }
 
@@ -32,10 +52,6 @@ func (self *Cache) Remove(key string) {
 }
 
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
-	type CacheData struct {
-		Data   []byte
-		Expire int64
-	}
 
 	var databuffer bytes.Buffer
 	var cachebuffer bytes.Buffer
@@ -61,10 +77,7 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 }
 
 func (self *Cache) GetCacheData(key string, data interface{}) bool {
-	var cacheData struct {
-		Data   []byte
-		Expire int64
-	}
+	var cacheData CacheData
 	buffer, _ := self.cache.Get(key)
 	inMemCache := true
 	if buffer == nil {
