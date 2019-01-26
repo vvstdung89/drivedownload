@@ -3,22 +3,23 @@ package drive
 import (
 	"github.com/vvstdung89/goutils/lrucache"
 	"github.com/vvstdung89/goutils/resource_lock"
-	"sync"
 )
 
-var lockStream = &sync.Mutex{}
-var lockDown = &sync.Mutex{}
+var lockStream *resource_lock.Lock
+var lockDown *resource_lock.Lock
 var driveStreamCache *lrucache.Cache
 var driveDownCache *lrucache.Cache
 
 func init() {
 	driveStreamCache = lrucache.Init("drivestream", 1000*1000, false)
 	driveDownCache = lrucache.Init("drivedown", 1000*1000, false)
+	lockStream = resource_lock.NewResourceLock(100 * 1000)
+	lockDown = resource_lock.NewResourceLock(100 * 1000)
 }
 
 //get drive stream link with cache
 func GetDriveStream(driveID string, accessToken string) DriveStreamInfo {
-	lockFile := resource_lock.NewResourceLock(100 * 1000).GetResourceLock("stream-" + driveID)
+	lockFile := lockStream.GetResourceLock("stream-" + driveID)
 	lockFile.Lock()
 	defer lockFile.Unlock()
 
@@ -33,7 +34,7 @@ func GetDriveStream(driveID string, accessToken string) DriveStreamInfo {
 
 //get drive download link with cache
 func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
-	lockFile := resource_lock.NewResourceLock(100 * 1000).GetResourceLock("down-" + driveID)
+	lockFile := lockDown.GetResourceLock("down-" + driveID)
 	lockFile.Lock()
 	defer lockFile.Unlock()
 
