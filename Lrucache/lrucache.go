@@ -24,7 +24,7 @@ func Init(name string, size int, persistent bool) *Cache {
 	return &Cache{lruCache, lvdb, persistent}
 }
 
-func (self *Cache) remove(key string) {
+func (self *Cache) Remove(key string) {
 	self.cache.Remove(key)
 	if self.persistent == true {
 		self.lvdb.Delete([]byte(key), nil)
