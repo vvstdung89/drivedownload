@@ -110,7 +110,7 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 			return false
 		}
 		if inMemCache == false {
-			self.cache.Add(key, cacheData)
+			self.cache.Add(key, buffer)
 		}
 		return true
 	}
