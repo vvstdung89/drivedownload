@@ -105,7 +105,7 @@ func DownloadInfo(driveID string, accessToken string) DriveDownInfo {
 		url := fmt.Sprintf("https://drive.google.com/uc?id=%s&confirm=Mzub&export=download", driveID)
 		response, err := netClient.Get(url)
 		if err != nil {
-			log.Println(driveID, accessToken, err.Error())
+			log.Println(driveID, err.Error())
 			return driveDownInfo
 		}
 		location = response.Header.Get("location")
@@ -127,4 +127,26 @@ func DownloadInfo(driveID string, accessToken string) DriveDownInfo {
 	}
 
 	return driveDownInfo
+}
+
+func CheckDownloadLink(driveID string) bool {
+	location := ""
+	var netClient = &http.Client{
+		Timeout: time.Second * 10,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	url := fmt.Sprintf("https://drive.google.com/uc?id=%s&confirm=Mzub&export=download", driveID)
+	response, err := netClient.Get(url)
+	if err != nil {
+		log.Println(driveID, err.Error())
+		return false
+	}
+	location = response.Header.Get("location")
+	if location != "" {
+		log.Println(location)
+		return true
+	}
+	return false
 }
