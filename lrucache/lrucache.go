@@ -10,7 +10,7 @@ import (
 )
 
 type CacheData struct {
-	Data   []byte
+	Data   interface{}
 	Expire int64
 }
 
@@ -52,25 +52,23 @@ func (self *Cache) Remove(key string) {
 }
 
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
-
-	var databuffer bytes.Buffer
-	var cachebuffer bytes.Buffer
-	enc := gob.NewEncoder(&databuffer)
-
-	err := enc.Encode(data)
-	if err != nil {
-		fmt.Println("There was an error:", err)
-		return err
-	}
-
-	enc = gob.NewEncoder(&cachebuffer)
-	err = enc.Encode(CacheData{Data: databuffer.Bytes(), Expire: expire})
-	if err != nil {
-		return err
-	}
-	self.cache.Add(key, cachebuffer.Bytes())
-
+	self.cache.Add(key, CacheData{Data: data, Expire: expire})
 	if self.persistent == true && expire == 0 {
+		var databuffer bytes.Buffer
+		var cachebuffer bytes.Buffer
+		enc := gob.NewEncoder(&databuffer)
+
+		err := enc.Encode(data)
+		if err != nil {
+			fmt.Println("There was an error:", err)
+			return err
+		}
+
+		enc = gob.NewEncoder(&cachebuffer)
+		err = enc.Encode(CacheData{Data: databuffer.Bytes(), Expire: expire})
+		if err != nil {
+			return err
+		}
 		self.lvdb.Put([]byte(key), cachebuffer.Bytes(), nil)
 	}
 	return nil
@@ -79,39 +77,43 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 func (self *Cache) GetCacheData(key string, data interface{}) bool {
 	var cacheData CacheData
 	buffer, _ := self.cache.Get(key)
-	inMemCache := true
+
 	if buffer == nil {
 		if self.persistent == true {
 			res, _ := self.lvdb.Get([]byte(key), nil)
 			if len(res) != 0 {
 				buffer = res
-				inMemCache = false
 			} else {
 				return false
 			}
 		} else {
 			return false
 		}
-	}
 
-	dec := gob.NewDecoder(bytes.NewReader(buffer.([]byte)))
-	err := dec.Decode(&cacheData)
-	if err != nil {
-		fmt.Println("There was an error:", err)
-		return false
-	} else {
-		if cacheData.Expire > 0 && cacheData.Expire < int64(time.Now().Unix()) {
-			return false
-		}
-		dec := gob.NewDecoder(bytes.NewReader(cacheData.Data))
-		err := dec.Decode(data)
+		dec := gob.NewDecoder(bytes.NewReader(buffer.([]byte)))
+		err := dec.Decode(&cacheData)
 		if err != nil {
 			fmt.Println("There was an error:", err)
 			return false
+		} else {
+			if cacheData.Expire > 0 && cacheData.Expire < int64(time.Now().Unix()) {
+				return false
+			}
+			dec := gob.NewDecoder(bytes.NewReader(cacheData.Data.([]byte)))
+			err := dec.Decode(data)
+			if err != nil {
+				fmt.Println("There was an error:", err)
+				return false
+			}
+
+			self.cache.Add(key, cacheData)
+
+			return true
 		}
-		if inMemCache == false {
-			self.cache.Add(key, buffer)
-		}
+
+	} else {
+		data = buffer
 		return true
 	}
+
 }

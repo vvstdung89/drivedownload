@@ -132,21 +132,25 @@ func DownloadInfo(driveID string, accessToken string) DriveDownInfo {
 func CheckDownloadLink(driveID string) bool {
 	location := ""
 	var netClient = &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 5,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 	url := fmt.Sprintf("https://drive.google.com/uc?id=%s&confirm=Mzub&export=download", driveID)
 	response, err := netClient.Get(url)
+
 	if err != nil {
+		//if time out still return true
 		log.Println(driveID, err.Error())
-		return false
+		return true
 	}
 	location = response.Header.Get("location")
 	if location != "" {
 		log.Println(location)
 		return true
 	}
+
+	//return false only if no location
 	return false
 }
