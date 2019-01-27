@@ -112,7 +112,7 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 		}
 
 	} else {
-		data = buffer
+		data = buffer.(CacheData).Data
 		return true
 	}
 
