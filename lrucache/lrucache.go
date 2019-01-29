@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/syndtr/goleveldb/leveldb"
+	"log"
+	"reflect"
 	"time"
 )
 
@@ -57,7 +59,6 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 		var databuffer bytes.Buffer
 		var cachebuffer bytes.Buffer
 		enc := gob.NewEncoder(&databuffer)
-
 		err := enc.Encode(data)
 		if err != nil {
 			fmt.Println("There was an error:", err)
@@ -105,14 +106,20 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 				fmt.Println("There was an error:", err)
 				return false
 			}
-
 			self.cache.Add(key, cacheData)
-
+			log.Println("lvdb save ", data, cacheData.Data.([]byte))
 			return true
 		}
 
 	} else {
-		data = buffer.(CacheData).Data
+		if buffer.(CacheData).Expire > 0 && buffer.(CacheData).Expire < int64(time.Now().Unix()) {
+			return false
+		}
+		k := reflect.ValueOf(data)
+		v := k.Elem()
+		z := buffer.(CacheData).Data
+		y := reflect.ValueOf(z)
+		v.Set(y)
 		return true
 	}
 
