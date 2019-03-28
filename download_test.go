@@ -37,8 +37,8 @@ func TestChunkDownload(*testing.T) {
 	}
 
 	size,_ := strconv.Atoi(resp.Header.Get("Content-Length"))
-	chunk := 3000000
-	parallel := 8
+	chunk := 2000000
+	parallel := 16
 
 	if size == 0 {
 		//log.Println(url, cookie)

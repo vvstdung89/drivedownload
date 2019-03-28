@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,16 +14,6 @@ import (
 	"time"
 )
 
-func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
-		conn, err := net.DialTimeout(netw, addr, cTimeout)
-		if err != nil {
-			return nil, err
-		}
-		conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
-	}
-}
 
 type Jar struct {
 	lk      sync.Mutex
@@ -48,8 +37,8 @@ func (jar *Jar) Cookies(u *url.URL) []*http.Cookie {
 }
 
 func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk int, parallel int) error {
-	//readWriteTimeout := time.Minute * 10
-	//connectTimeout := time.Second * 30
+	readWriteTimeout := time.Minute * 10
+	connectTimeout := time.Second * 30
 
 	//set default
 	if chunk == 0 {
@@ -74,11 +63,15 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 	for i := 0; i < parallel; i++ {
 		go func() {
 			for true {
+				if len(job) == 0 {
+					break
+				}
 				taskID := <-job
 				if cont == false {
 					wg.Done()
 					continue
 				}
+
 				try := 0
 				startRange := taskID * chunk
 				endRange := ((taskID + 1) * chunk) - 1
@@ -87,16 +80,15 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 				}
 
 				for cont == true {
-
 					u, err := url.Parse(streamLink)
 					cookies := []*http.Cookie{}
 					cookies = append(cookies, &http.Cookie{Name:"DRIVE_STREAM",Value: cookie})
 					client := &http.Client{
 						Jar: NewJar(),
-						//Timeout: readWriteTimeout,
-						//Transport: &http.Transport{
-						//	ResponseHeaderTimeout: connectTimeout,
-						//},
+						Timeout: readWriteTimeout,
+						Transport: &http.Transport{
+							ResponseHeaderTimeout: connectTimeout,
+						},
 					}
 					client.Jar.SetCookies(u, cookies)
 
@@ -104,8 +96,8 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 					req, _ := http.NewRequest("GET", streamLink, nil)
 					range_header := "bytes=" + strconv.Itoa(startRange) + "-" + strconv.Itoa(endRange)
 					req.Header.Add("Range", range_header)
-
 					resp, err := client.Do(req)
+
 					defer func(){
 						if resp != nil {
 							resp.Body.Close()
@@ -155,9 +147,7 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 					}
 				}
 
-				if len(job) == 0 {
-					break
-				}
+
 			}
 		}()
 	}
