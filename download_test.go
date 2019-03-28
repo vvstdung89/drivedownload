@@ -12,7 +12,6 @@ import (
 )
 
 func TestChunkDownload(*testing.T) {
-
 	streamInfo := drive.GetDriveStream("1_wdQ5mnVZxcO4OPBDXWJOPUwjzl25DUD", "")
 	fmt.Println(streamInfo.Streams["360"], streamInfo.Cookie)
 	dst := "/tmp/filetmp"
@@ -24,19 +23,19 @@ func TestChunkDownload(*testing.T) {
 	}
 	u, err := url.Parse(streamLink)
 	cookies := []*http.Cookie{}
-	cookies = append(cookies, &http.Cookie{Name:"DRIVE_STREAM", Value: strings.Split(cookie, "=")[1] })
-	client.Jar.SetCookies(u,cookies)
+	cookies = append(cookies, &http.Cookie{Name: "DRIVE_STREAM", Value: strings.Split(cookie, "=")[1]})
+	client.Jar.SetCookies(u, cookies)
 	fmt.Println(strings.Split(cookie, "=")[1])
 	req, _ := http.NewRequest("GET", u.String(), nil)
 
-	resp,err := client.Do(req)
+	resp, err := client.Do(req)
 
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	size,_ := strconv.Atoi(resp.Header.Get("Content-Length"))
+	size, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
 	chunk := 2000000
 	parallel := 16
 
@@ -51,7 +50,5 @@ func TestChunkDownload(*testing.T) {
 			log.Println("Download success")
 		}
 	}
-
-
 
 }
