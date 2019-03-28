@@ -54,7 +54,7 @@ func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 		return driveStreamInfo
 	}
 
-	re := regexp.MustCompile("(DRIVE_STREAM=([^;]+);)")
+	re := regexp.MustCompile("(DRIVE_STREAM=([^;]+))")
 	drive_stream := re.Find([]byte(response.Header["Set-Cookie"][0]))
 
 	body, _ := ioutil.ReadAll(response.Body)
@@ -64,8 +64,8 @@ func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 		for _, stream := range streamArr {
 			res := getQueryValue(stream, "itag")
 			_url := getQueryValue(stream, "url")
-			var re = regexp.MustCompile(`(https://[^\.]*)\.([^\/]*)`)
-			_url = re.ReplaceAllString(_url, `$1.gvt1.com`)
+			//var re = regexp.MustCompile(`(https://[^\.]*)\.([^\/]*)`)
+			//_url = re.ReplaceAllString(_url, `$1.drive.google.com`)
 			switch res {
 			case "18":
 				streamInfo["360"] = _url

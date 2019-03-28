@@ -11,8 +11,8 @@ var driveStreamCache *lrucache.Cache
 var driveDownCache *lrucache.Cache
 
 func init() {
-	driveStreamCache = lrucache.Init("drivestream", 1000*1000, false)
-	driveDownCache = lrucache.Init("drivedown", 1000*1000, false)
+	driveStreamCache = lrucache.Init("drivestream", 1000*1000, true)
+	driveDownCache = lrucache.Init("drivedown", 1000*1000, true)
 	lockStream = resource_lock.NewResourceLock(100 * 1000)
 	lockDown = resource_lock.NewResourceLock(100 * 1000)
 }

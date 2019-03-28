@@ -55,7 +55,7 @@ func (self *Cache) Remove(key string) {
 
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
 	self.cache.Add(key, CacheData{Data: data, Expire: expire})
-	if self.persistent == true && expire == 0 {
+	if self.persistent == true{
 		var databuffer bytes.Buffer
 		var cachebuffer bytes.Buffer
 		enc := gob.NewEncoder(&databuffer)
@@ -68,6 +68,7 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 		enc = gob.NewEncoder(&cachebuffer)
 		err = enc.Encode(CacheData{Data: databuffer.Bytes(), Expire: expire})
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		self.lvdb.Put([]byte(key), cachebuffer.Bytes(), nil)
@@ -107,7 +108,7 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 				return false
 			}
 			self.cache.Add(key, cacheData)
-			log.Println("lvdb save ", data, cacheData.Data.([]byte))
+			//log.Println("lvdb save ", data, cacheData.Data.([]byte))
 			return true
 		}
 
