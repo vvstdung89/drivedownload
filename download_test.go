@@ -13,9 +13,9 @@ import (
 
 func TestChunkDownload(*testing.T) {
 	streamInfo := drive.GetDriveStream("1_wdQ5mnVZxcO4OPBDXWJOPUwjzl25DUD", "")
-	fmt.Println(streamInfo.Streams["360"], streamInfo.Cookie)
+	//fmt.Println(streamInfo.Streams["720"], streamInfo.Cookie)
 	dst := "/tmp/filetmp"
-	streamLink := streamInfo.Streams["360"]
+	streamLink := streamInfo.Streams["720"]
 	cookie := streamInfo.Cookie
 
 	client := &http.Client{
