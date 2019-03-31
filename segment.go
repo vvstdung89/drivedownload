@@ -2,7 +2,6 @@ package goutils
 
 import (
 	"bufio"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -12,13 +11,12 @@ import (
 )
 
 type SegmentInfo struct {
-	p int        //prefix size
-	d int        //target duration
-	s [][]int    //segment size
-	t [][]string //segment time
+	D int        //target duration
+	S [][]int    //segment size
+	T [][]string //segment time
 }
 
-func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefixFile string) *SegmentInfo {
+func SegmentVideo(src string, targetDuration int, maxSize int) *SegmentInfo {
 
 	//transcode to ffmpeg
 	if err := exec.Command("ffmpeg", "-threads", "1", "-i", src, "-c:a", "copy", "-c:v", "copy", "-hls_playlist_type", "vod", "-hls_time", strconv.Itoa(targetDuration), "-hls_flags", "single_file", "-threads", "1", src+".m3u8").Run(); err != nil {
@@ -34,28 +32,18 @@ func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefi
 	}
 	defer rfile.Close()
 
-	prefixReader, err := os.Open(prefixFile)
-	if err != nil {
-		log.Fatal(err)
-		return nil
-	}
-	defer prefixReader.Close()
-
 	var segFile = 0
 	var fileSize = 0
 	var size = 0
 	var curSegSize = 0
 
-	prefixInfo, _ := prefixReader.Stat()
-
 	var segmentInfo = SegmentInfo{
-		d: 0,
-		t: [][]string{},
-		s: [][]int{},
-		p: int(prefixInfo.Size()),
+		D: 0,
+		T: [][]string{},
+		S: [][]int{},
 	}
-	segmentInfo.s = append(segmentInfo.s, []int{})
-	segmentInfo.t = append(segmentInfo.t, []string{})
+	segmentInfo.S = append(segmentInfo.S, []int{})
+	segmentInfo.T = append(segmentInfo.T, []string{})
 
 	scanner := bufio.NewScanner(rfile)
 	for scanner.Scan() {
@@ -70,10 +58,10 @@ func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefi
 			fileSize, _ = strconv.Atoi(match[2])
 			curSegSize = start + size
 
-			if segmentInfo.s[segFile] == nil {
-				segmentInfo.s[segFile] = []int{}
+			if segmentInfo.S[segFile] == nil {
+				segmentInfo.S[segFile] = []int{}
 			}
-			segmentInfo.s[segFile] = append(segmentInfo.s[segFile], size)
+			segmentInfo.S[segFile] = append(segmentInfo.S[segFile], size)
 
 			if curSegSize > maxSize {
 
@@ -84,24 +72,18 @@ func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefi
 				to.Truncate(0)
 				defer to.Close()
 
-				_, err = io.Copy(to, prefixReader)
-				if err != nil {
-					log.Fatal(err)
-					return nil
-				}
-				prefixReader.Seek(0, 0)
-				if err := exec.Command("dd", "bs=1M", "if="+src+".ts", "skip="+strconv.Itoa(fileSize+size-curSegSize), "count="+strconv.Itoa(curSegSize), "iflag=skip_bytes,count_bytes", "of="+src+"_"+strconv.Itoa(segFile), "oflag=append", "conv=notrunc").Run(); err != nil {
+				if err := exec.Command("dd", "bs=1M", "if="+src+".ts", "skip="+strconv.Itoa(fileSize+size-curSegSize), "count="+strconv.Itoa(curSegSize), "iflag=skip_bytes,count_bytes", "of="+src+"_"+strconv.Itoa(segFile)).Run(); err != nil {
 					log.Printf("Command finished with error: %v", err)
 				}
 
 				segFile++
 				curSegSize = 0
 
-				if len(segmentInfo.s) < segFile+1 {
-					segmentInfo.s = append(segmentInfo.s, []int{})
+				if len(segmentInfo.S) < segFile+1 {
+					segmentInfo.S = append(segmentInfo.S, []int{})
 				}
-				if len(segmentInfo.t) < segFile+1 {
-					segmentInfo.t = append(segmentInfo.t, []string{})
+				if len(segmentInfo.T) < segFile+1 {
+					segmentInfo.T = append(segmentInfo.T, []string{})
 				}
 			}
 		}
@@ -109,13 +91,13 @@ func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefi
 		if strings.HasPrefix(line, "#EXT-X-TARGETDURATION") {
 			regex := regexp.MustCompile(":([\\d]+)")
 			match := regex.FindStringSubmatch(line)
-			segmentInfo.d, _ = strconv.Atoi(match[1])
+			segmentInfo.D, _ = strconv.Atoi(match[1])
 		}
 
 		if strings.HasPrefix(line, "#EXTINF") {
 			regex := regexp.MustCompile(":(.+),")
 			match := regex.FindStringSubmatch(line)
-			segmentInfo.t[segFile] = append(segmentInfo.t[segFile], match[1])
+			segmentInfo.T[segFile] = append(segmentInfo.T[segFile], match[1])
 		}
 
 		if strings.HasPrefix(line, "#EXT-X-ENDLIST") {
@@ -127,13 +109,7 @@ func SegmentVideo(src string, targetDuration int, maxSize int, dst string, prefi
 				to.Truncate(0)
 				defer to.Close()
 
-				_, err = io.Copy(to, prefixReader)
-				if err != nil {
-					log.Fatal(err)
-					return nil
-				}
-
-				if err := exec.Command("dd", "bs=1M", "if="+src+".ts", "skip="+strconv.Itoa(fileSize+size-curSegSize), "count="+strconv.Itoa(curSegSize), "iflag=skip_bytes,count_bytes", "of="+src+"_"+strconv.Itoa(segFile), "oflag=append", "conv=notrunc").Run(); err != nil {
+				if err := exec.Command("dd", "bs=1M", "if="+src+".ts", "skip="+strconv.Itoa(fileSize+size-curSegSize), "count="+strconv.Itoa(curSegSize), "iflag=skip_bytes,count_bytes", "of="+src+"_"+strconv.Itoa(segFile)).Run(); err != nil {
 					log.Printf("Command finished with error: %v", err)
 				}
 			}

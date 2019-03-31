@@ -110,18 +110,18 @@ func GetTeamDrive(accesstoken string) ([]string, error) {
 	return res, nil
 }
 
-func UploadFile(file string, accesstoken string, metadata interface{}) (*UploadResult, error) {
+func UploadFile(file string, accesstoken string, metadata interface{}) (string, error) {
 	var actionURL = GAPIUrl + "/upload/drive/v3/files?uploadType=multipart&supportsTeamDrives=true"
 
 	fd, err := os.Open(file)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer fd.Close()
 
 	fi, err := fd.Stat()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	client := &http.Client{}
@@ -150,22 +150,22 @@ func UploadFile(file string, accesstoken string, metadata interface{}) (*UploadR
 	//Exec request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if content, err = ioutil.ReadAll(resp.Body); err != nil {
-		return nil, err
+		return "", err
 	}
 	//log.Println(string(content))
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Status code with " + strconv.Itoa(resp.StatusCode))
+		return "", errors.New("Status code with " + strconv.Itoa(resp.StatusCode))
 	}
 
 	var res = &UploadResult{}
 
 	if err = json.Unmarshal(content, res); err != nil {
-		return nil, err
+		return "", err
 	}
-	return res, nil
+	return res.Id, nil
 }

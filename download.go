@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-
 type Jar struct {
 	lk      sync.Mutex
 	cookies []*http.Cookie
@@ -82,9 +81,9 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 				for cont == true {
 					u, err := url.Parse(streamLink)
 					cookies := []*http.Cookie{}
-					cookies = append(cookies, &http.Cookie{Name:"DRIVE_STREAM",Value: cookie})
+					cookies = append(cookies, &http.Cookie{Name: "DRIVE_STREAM", Value: cookie})
 					client := &http.Client{
-						Jar: NewJar(),
+						Jar:     NewJar(),
 						Timeout: readWriteTimeout,
 						Transport: &http.Transport{
 							ResponseHeaderTimeout: connectTimeout,
@@ -98,7 +97,7 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 					req.Header.Add("Range", range_header)
 					resp, err := client.Do(req)
 
-					defer func(){
+					defer func() {
 						if resp != nil {
 							resp.Body.Close()
 						}
@@ -114,9 +113,9 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 							break
 						}
 						reader, err1 := ioutil.ReadAll(resp.Body)
-						if err1==nil && reader != nil && len(reader) > 0 && (resp.StatusCode == 206 || resp.StatusCode == 200 || resp.StatusCode == 302) {
-							go func(){
-								if f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE, 0777);err !=nil {
+						if err1 == nil && reader != nil && len(reader) > 0 && (resp.StatusCode == 206 || resp.StatusCode == 200 || resp.StatusCode == 302) {
+							go func() {
+								if f, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE, 0777); err != nil {
 									log.Println(err)
 									cont = false
 									wg.Done()
@@ -130,7 +129,7 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 								accummulate <- taskID
 								wg.Done()
 							}()
-							break;
+							break
 						} else {
 							err = errors.New("Response error " + strconv.Itoa(resp.StatusCode))
 						}
@@ -147,19 +146,16 @@ func ChunkDownload(dst string, streamLink string, cookie string, size int, chunk
 					}
 				}
 
-
 			}
 		}()
 	}
 
 	wg.Wait()
-	fmt.Println(len(accummulate))
+	//fmt.Println(len(accummulate))
 	if len(accummulate) != taskNum {
 		os.RemoveAll(dst)
 		return errors.New("Download fail")
 	}
-
-
 
 	return nil
 }
