@@ -1,6 +1,5 @@
 package mongo
 
-
 import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,17 +22,17 @@ type CSElem struct {
 	ID            bsonx.Doc `json:"id" bson:"_id"`
 	OperationType string    `json:"operationType" bson:"operationType"`
 	FullDocument  bsonx.Doc `json:"fullDocument" bson:"fullDocument"`
-	NS            bsonx.Doc    `json:"ns" bson:"ns"`
+	NS            bsonx.Doc `json:"ns" bson:"ns"`
 }
 
 func NewMongoClient(ep string) *MongoClient {
 	client, err := mongo.NewClient(options.Client().ApplyURI(ep))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("cannot connect 1", err)
 	}
 	err = client.Connect(context.TODO())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("cannot connect 2", err)
 	}
 
 	return &MongoClient{
@@ -55,14 +54,14 @@ func (s *MongoClient) getFirstOplogTime(ns string) *primitive.Timestamp {
 	return &e.Ts
 }
 
-func (s *MongoClient) retrieveOplog(db string, col string) (chan bsonx.Doc){
+func (s *MongoClient) RetrieveOplog(db string, col string) chan CSElem {
 	collection := s.Client.Database(db).Collection(col)
 	ctx := context.Background()
-	docs := make(chan bsonx.Doc)
+	docs := make(chan CSElem)
 	var lastToken bsonx.Doc
-
+	resumeTokenPath := "./resume_token_" + db + "_" + col
 	//Read and Write token
-	f, err := os.OpenFile("./resume_token", os.O_RDWR|os.O_CREATE, 0777)
+	f, err := os.OpenFile(resumeTokenPath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		log.Println(err)
 		panic(err)
@@ -74,17 +73,18 @@ func (s *MongoClient) retrieveOplog(db string, col string) (chan bsonx.Doc){
 	}
 	f.Close()
 	go func() {
-		for _ = range time.Tick(time.Second * 5) {
-			if lastToken == nil {
+		for { //save token from 5 seconds ago
+			tmpToken := lastToken
+			time.Sleep(5 * time.Second)
+			if tmpToken == nil {
 				continue
 			}
-			bs, _ := bson.Marshal(lastToken)
-			log.Println("Save ...", len(bs))
-			ioutil.WriteFile("./resume_token" ,bs,0777)
+			bs, _ := bson.Marshal(tmpToken)
+			ioutil.WriteFile(resumeTokenPath, bs, 0777)
 		}
 	}()
 
-	pipeline := []bson.M{bson.M{"$project": bson.M{"documentKey": false}}}
+	pipeline := []bson.M{}
 	options := &options.ChangeStreamOptions{}
 
 	if resumeToken != nil && len(resumeToken) > 0 {
@@ -99,25 +99,31 @@ func (s *MongoClient) retrieveOplog(db string, col string) (chan bsonx.Doc){
 		options.SetStartAtOperationTime(s.getFirstOplogTime(db + "." + col))
 	}
 
-	cur, err := collection.Watch(ctx, pipeline, options)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-
-	go func (){
-		defer cur.Close(ctx)
-		for cur.Next(ctx) {
-			elem := CSElem{}
-			if err := cur.Decode(&elem); err != nil {
-				log.Fatal(err)
+	go func() {
+		for {
+			cur, err := collection.Watch(ctx, pipeline, options)
+			if err != nil {
+				log.Println("connect error", err)
+				time.Sleep(time.Second * 5)
+				continue
 			}
-			lastToken = elem.ID
-			docs <- elem.FullDocument
+			defer cur.Close(ctx)
+			for cur.Next(ctx) {
+				elem := CSElem{}
+				if err := cur.Decode(&elem); err != nil {
+					log.Fatal(err)
+				}
+				lastToken = elem.ID
+				docs <- elem
+			}
+
+			if err := cur.Err(); err != nil {
+				log.Println("watch error", err)
+			}
+			time.Sleep(time.Second * 10)
 		}
-		if err := cur.Err(); err != nil {
-			log.Fatal(err)
-		}
+
 	}()
+
 	return docs
 }
