@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"github.com/syndtr/goleveldb/leveldb"
 	"log"
-	"reflect"
 	"time"
 )
 
@@ -54,17 +53,17 @@ func (self *Cache) Remove(key string) {
 }
 
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
-	self.cache.Add(key, CacheData{Data: data, Expire: expire})
-	if self.persistent == true{
-		var databuffer bytes.Buffer
-		var cachebuffer bytes.Buffer
-		enc := gob.NewEncoder(&databuffer)
-		err := enc.Encode(data)
-		if err != nil {
-			fmt.Println("There was an error:", err)
-			return err
-		}
+	var databuffer bytes.Buffer
+	enc := gob.NewEncoder(&databuffer)
+	err := enc.Encode(data)
+	if err != nil {
+		fmt.Println("There was an error:", err)
+		return err
+	}
 
+	self.cache.Add(key, CacheData{Data: databuffer.Bytes(), Expire: expire})
+	if self.persistent == true {
+		var cachebuffer bytes.Buffer
 		enc = gob.NewEncoder(&cachebuffer)
 		err = enc.Encode(CacheData{Data: databuffer.Bytes(), Expire: expire})
 		if err != nil {
@@ -116,11 +115,12 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 		if buffer.(CacheData).Expire > 0 && buffer.(CacheData).Expire < int64(time.Now().Unix()) {
 			return false
 		}
-		k := reflect.ValueOf(data)
-		v := k.Elem()
-		z := buffer.(CacheData).Data
-		y := reflect.ValueOf(z)
-		v.Set(y)
+		dec := gob.NewDecoder(bytes.NewReader(buffer.(CacheData).Data.([]byte)))
+		err := dec.Decode(data)
+		if err != nil {
+			fmt.Println("There was an error:", err)
+			return false
+		}
 		return true
 	}
 

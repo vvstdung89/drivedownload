@@ -1,9 +1,11 @@
 package lrucache_test
 
 import (
-	"github.com/goutils/lrucache"
+	"fmt"
+	"github.com/vvstdung89/goutils/lrucache"
 	"log"
 	"testing"
+	"time"
 )
 
 type abc struct {
@@ -26,11 +28,22 @@ func TestCache_GetCacheData(t *testing.T) {
 	}
 
 	b := abc{}
+	time1 := time.Now()
 	isOK := cache.GetCacheData("1", &b)
+	fmt.Println(time.Since(time1).Seconds())
 	if isOK == true {
 		log.Println(b)
 	} else {
 		log.Println("Not in cache")
 	}
 
+	c := abc{}
+	time2 := time.Now()
+	isOK = cache.GetCacheData("1", &c)
+	fmt.Println(time.Since(time2).Seconds())
+	if isOK == true {
+		log.Println(b)
+	} else {
+		log.Println("Not in cache")
+	}
 }

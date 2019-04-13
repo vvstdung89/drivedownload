@@ -11,12 +11,22 @@ import (
 
 func DownloadStream(driveID string, quality string, dst string) error {
 	streamInfo := GetDriveStream(driveID, "")
+
+	if len(streamInfo.Streams) == 0 {
+		return errors.New("Cannot get stream link")
+	}
+
 	streamLink := streamInfo.Streams[quality]
+	if streamLink == "" {
+		return errors.New("Cannot get stream quality")
+	}
+
 	cookie := streamInfo.Cookie
 
 	client := &http.Client{
 		Jar: goutils.NewJar(),
 	}
+
 	u, err := url.Parse(streamLink)
 	cookies := []*http.Cookie{}
 	cookies = append(cookies, &http.Cookie{Name: "DRIVE_STREAM", Value: strings.Split(cookie, "=")[1]})
