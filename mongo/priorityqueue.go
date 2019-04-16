@@ -17,6 +17,13 @@ type PriorityQueue struct {
 	WorkerName string
 }
 
+type ItemInfo struct {
+	Id     string `json:"id"`
+	Msg    string `json:"msg"`
+	GetCnt int    `json:"getCnt"`
+	Status string `json:"status"`
+}
+
 func NewPriorityQueue(ep string, queueName string, workerName string) (*PriorityQueue, error) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(ep))
 	if err != nil {
@@ -71,7 +78,7 @@ func (s *PriorityQueue) AddTask(id, msg string, pri int) {
 	s.Collection.FindOneAndUpdate(ctx, filter, update, options)
 }
 
-func (s *PriorityQueue) GetTask() bson.Raw {
+func (s *PriorityQueue) GetTask() (*ItemInfo, error) {
 	filter := bson.D{
 		{"getCnt", 0},
 	}
@@ -89,13 +96,17 @@ func (s *PriorityQueue) GetTask() bson.Raw {
 	}
 	options.SetReturnDocument(1)
 
-	res := s.Collection.FindOneAndUpdate(ctx, filter, update, options)
-	if res.Err() != nil {
-		log.Println(res.Err())
-		return nil
+	doc := s.Collection.FindOneAndUpdate(ctx, filter, update, options)
+	if doc.Err() != nil {
+		log.Println(doc.Err())
+		return nil, doc.Err()
 	} else {
-		doc, _ := res.DecodeBytes()
-		return doc
+		res := &ItemInfo{}
+		err := doc.Decode(res)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
 	}
 }
 

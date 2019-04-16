@@ -29,14 +29,14 @@ func (s *MongoClient) GetCollection(db, col string) *mongo.Collection {
 	return collection
 }
 
-func (s *MongoClient) CreateIndex(db, col string, keys bson.M, unique bool) *mongo.Collection {
+func (s *MongoClient) CreateIndex(db, col string, keys bson.M, unique bool) error {
 	collection := s.Client.Database(db).Collection(col)
 	opts := options.CreateIndexes().SetMaxTime(10 * time.Second)
 	index := mongo.IndexModel{}
 	index.Keys = keys
 	index.Options = &options.IndexOptions{Unique: &unique}
 
-	collection.Indexes().CreateOne(context.Background(), index, opts)
+	_, err := collection.Indexes().CreateOne(context.Background(), index, opts)
 
-	return collection
+	return err
 }
