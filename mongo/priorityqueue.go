@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -58,11 +59,9 @@ func (s *PriorityQueue) AddTask(id, msg string, pri int) {
 		{"id", id},
 	}
 	update := bson.D{
-		{"$set", bson.D{
+		{"$setOnInsert", bson.D{
 			{"id", id},
 			{"msg", msg},
-		}},
-		{"$setOnInsert", bson.D{
 			{"status", "Init"},
 			{"getCnt", 0},
 			{"time_created", time.Now()},
@@ -77,11 +76,9 @@ func (s *PriorityQueue) GetTask() bson.Raw {
 		{"getCnt", 0},
 	}
 	update := bson.D{
-		{"$set", bson.D{
-			{"worker", bson.D{
-				{s.WorkerName, bson.D{{"time_start", time.Now()}}},
-			},
-			},
+		{"$set", bson.M{
+			"result.time_start": time.Now(),
+			"status":            "Processing",
 		}},
 		{"$inc", bson.D{{"getCnt", 1}}},
 	}
@@ -121,24 +118,57 @@ func (s *PriorityQueue) SetTaskPriority(id string, pri int) error {
 	return res.Err()
 }
 
-func (s *PriorityQueue) UpdateStatus(id string, status string, msg string) error {
-	filter := bson.D{
-		{"id", id},
+func (s *PriorityQueue) UpdateField(filter map[string]interface{}, _update map[string]interface{}) error {
+	ctx := context.Background()
+	options := &options.UpdateOptions{}
+
+	update := bson.M{
+		"$set": _update,
+	}
+
+	_, err := s.Collection.UpdateMany(ctx, filter, update, options)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (s *PriorityQueue) AddToSet(filter map[string]interface{}, _update map[string]interface{}) error {
+	ctx := context.Background()
+	options := &options.UpdateOptions{}
+
+	update := bson.M{
+		"$addToSet": _update,
+	}
+
+	_, err := s.Collection.UpdateMany(ctx, filter, update, options)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (s *PriorityQueue) UpdateStatus(filter map[string]interface{}, status string, msg string) error {
+
+	overStatus := status
+	if strings.Index(status, "Fail") > 1 {
+		overStatus = "Fail"
 	}
 	update := bson.D{
 		{"$set", bson.D{
-			{"status", status},
-			{"worker." + s.WorkerName + ".time_update", time.Now()},
-			{"worker." + s.WorkerName + ".status", status},
-			{"worker." + s.WorkerName + ".msg", msg}},
+			{"status", overStatus},
+			{"result.time_update", time.Now()},
+			{"result.status", status},
+			{"result.worker", s.WorkerName},
+			{"result.msg", msg}},
 		},
 	}
 
 	ctx := context.Background()
-	options := &options.FindOneAndUpdateOptions{}
-	res := s.Collection.FindOneAndUpdate(ctx, filter, update, options)
-	if res.Err() != nil {
-		log.Println(res.Err())
+	options := &options.UpdateOptions{}
+	_, err := s.Collection.UpdateMany(ctx, filter, update, options)
+	if err != nil {
+		log.Println(err)
 	}
-	return res.Err()
+	return err
 }

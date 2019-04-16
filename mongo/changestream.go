@@ -15,7 +15,7 @@ import (
 )
 
 type MongoClient struct {
-	Client *mongo.Client
+	*mongo.Client
 }
 
 type CSElem struct {
@@ -23,21 +23,6 @@ type CSElem struct {
 	OperationType string    `json:"operationType" bson:"operationType"`
 	FullDocument  bsonx.Doc `json:"fullDocument" bson:"fullDocument"`
 	NS            bsonx.Doc `json:"ns" bson:"ns"`
-}
-
-func NewMongoClient(ep string) *MongoClient {
-	client, err := mongo.NewClient(options.Client().ApplyURI(ep))
-	if err != nil {
-		log.Fatal("cannot connect 1", err)
-	}
-	err = client.Connect(context.TODO())
-	if err != nil {
-		log.Fatal("cannot connect 2", err)
-	}
-
-	return &MongoClient{
-		Client: client,
-	}
 }
 
 func (s *MongoClient) getFirstOplogTime(ns string) *primitive.Timestamp {

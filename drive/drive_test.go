@@ -1,12 +1,11 @@
 package drive
 
 import (
-	"github.com/vvstdung89/goutils/drive"
 	"log"
 	"testing"
 )
 
 func TestCheckDownloadLink(*testing.T) {
-	xxx := drive.CheckDownloadLink("ddd")
+	xxx := FileInfo("0B0EM1NfwGeVfMEtCVkRZcWh2QnM")
 	log.Println(xxx)
 }

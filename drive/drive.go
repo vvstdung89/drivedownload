@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -18,6 +19,7 @@ type DriveStreamInfo struct {
 	Streams     map[string]string
 	CreatedTime int64
 	ExpireTime  int64
+	Hash        string
 }
 
 type DriveDownInfo struct {
@@ -36,6 +38,41 @@ func getQueryValue(queryString, key string) string {
 	return ""
 }
 
+type DriveFileInfo struct {
+	Md5       string `json:"md5Checksum"`
+	Type      string `json:"mimeType"`
+	VideoInfo struct {
+		Width    int    `json:"width"`
+		Height   int    `json:"height"`
+		Duration string `json:"durationMillis"`
+	} `json:"videoMediaMetadata"`
+}
+
+func FileInfo(driveID string) *DriveFileInfo {
+	var netClient = &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	request, _ := http.NewRequest("GET", fmt.Sprintf("https://www.googleapis.com/drive/v3/files/%s?fields=md5Checksum%%2CmimeType%%2CvideoMediaMetadata&key=%s", driveID, "AIzaSyC1eQ1xj69IdTMeii5r7brs3R90eck-m7k"), nil)
+	request.Header.Add("x-origin", "https://drive.google.com")
+	request.Header.Add("x-referer", "https://drive.google.com")
+	request.Header.Add("referer", "https://drive.google.com")
+	response, err := netClient.Do(request)
+
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	body, _ := ioutil.ReadAll(response.Body)
+	info := &DriveFileInfo{}
+	fmt.Println(string(body))
+	if err = json.Unmarshal(body, info); err != nil {
+		log.Println(err)
+		return nil
+	}
+	return info
+}
+
 func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 
 	//get from cache
@@ -48,7 +85,6 @@ func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 	var netClient = &http.Client{
 		Timeout: time.Second * 10,
 	}
-
 	response, err := netClient.Get(fmt.Sprintf("https://drive.google.com/e/get_video_info?docid=%s&access_token=%s", driveID, accessToken))
 	if err != nil {
 		return driveStreamInfo
