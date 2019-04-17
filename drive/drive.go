@@ -19,7 +19,6 @@ type DriveStreamInfo struct {
 	Streams     map[string]string
 	CreatedTime int64
 	ExpireTime  int64
-	Hash        string
 }
 
 type DriveDownInfo struct {
