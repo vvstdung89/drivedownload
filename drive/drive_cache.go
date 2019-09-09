@@ -46,3 +46,13 @@ func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
 	driveDownCache.SaveCacheData("down-"+driveID, driveDownInfo, driveDownInfo.ExpireTime)
 	return driveDownInfo
 }
+
+//get drive download link with cache
+func GetDriveDownloadLinkAsync(driveID string, accessToken string) DriveDownInfo {
+	var driveDownInfo DriveDownInfo
+	if isOK := driveDownCache.GetCacheData("down-"+driveID, &driveDownInfo); isOK == true {
+		return driveDownInfo
+	}
+	go GetDriveDownloadLink(driveID, accessToken)
+	return driveDownInfo
+}
