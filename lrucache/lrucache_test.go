@@ -27,9 +27,9 @@ func TestCache_GetCacheData(t *testing.T) {
 		panic(isOK)
 	}
 
-	b := abc{}
 	time1 := time.Now()
-	isOK := cache.GetCacheData("1", &b)
+	bb, isOK := cache.GetCacheData("1")
+	b := bb.(*abc)
 	fmt.Println(time.Since(time1).Seconds())
 	if isOK == true {
 		log.Println(b)
@@ -37,12 +37,12 @@ func TestCache_GetCacheData(t *testing.T) {
 		log.Println("Not in cache")
 	}
 
-	c := abc{}
 	time2 := time.Now()
-	isOK = cache.GetCacheData("1", &c)
+	cc, isOK := cache.GetCacheData("1")
+	c := cc.(*abc)
 	fmt.Println(time.Since(time2).Seconds())
 	if isOK == true {
-		log.Println(b)
+		log.Println(c)
 	} else {
 		log.Println("Not in cache")
 	}

@@ -53,19 +53,11 @@ func (self *Cache) Remove(key string) {
 }
 
 func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) error {
-	var databuffer bytes.Buffer
-	enc := gob.NewEncoder(&databuffer)
-	err := enc.Encode(data)
-	if err != nil {
-		fmt.Println("There was an error:", err)
-		return err
-	}
-
-	self.cache.Add(key, CacheData{Data: databuffer.Bytes(), Expire: expire})
+	self.cache.Add(key, CacheData{Data: data, Expire: expire})
 	if self.persistent == true {
 		var cachebuffer bytes.Buffer
-		enc = gob.NewEncoder(&cachebuffer)
-		err = enc.Encode(CacheData{Data: databuffer.Bytes(), Expire: expire})
+		enc := gob.NewEncoder(&cachebuffer)
+		err := enc.Encode(CacheData{Data: data, Expire: expire})
 		if err != nil {
 			log.Println(err)
 			return err
@@ -75,7 +67,7 @@ func (self *Cache) SaveCacheData(key string, data interface{}, expire int64) err
 	return nil
 }
 
-func (self *Cache) GetCacheData(key string, data interface{}) bool {
+func (self *Cache) GetCacheData(key string) (interface{}, bool) {
 	var cacheData CacheData
 	buffer, _ := self.cache.Get(key)
 
@@ -85,43 +77,30 @@ func (self *Cache) GetCacheData(key string, data interface{}) bool {
 			if len(res) != 0 {
 				buffer = res
 			} else {
-				return false
+				return nil, false
 			}
 		} else {
-			return false
+			return nil, false
 		}
 
 		dec := gob.NewDecoder(bytes.NewReader(buffer.([]byte)))
 		err := dec.Decode(&cacheData)
 		if err != nil {
 			fmt.Println("There was an error:", err)
-			return false
+			return nil, false
 		} else {
 			if cacheData.Expire > 0 && cacheData.Expire < int64(time.Now().Unix()) {
-				return false
-			}
-			dec := gob.NewDecoder(bytes.NewReader(cacheData.Data.([]byte)))
-			err := dec.Decode(data)
-			if err != nil {
-				fmt.Println("There was an error:", err)
-				return false
+				return nil, false
 			}
 			self.cache.Add(key, cacheData)
 			//log.Println("lvdb save ", data, cacheData.Data.([]byte))
-			return true
+			return cacheData.Data, true
 		}
 
 	} else {
 		if buffer.(CacheData).Expire > 0 && buffer.(CacheData).Expire < int64(time.Now().Unix()) {
-			return false
+			return nil, false
 		}
-		dec := gob.NewDecoder(bytes.NewReader(buffer.(CacheData).Data.([]byte)))
-		err := dec.Decode(data)
-		if err != nil {
-			fmt.Println("There was an error:", err)
-			return false
-		}
-		return true
+		return buffer.(CacheData).Data, true
 	}
-
 }

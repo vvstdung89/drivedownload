@@ -1,6 +1,7 @@
 package drive
 
 import (
+	"encoding/gob"
 	"github.com/vvstdung89/goutils/lrucache"
 	"github.com/vvstdung89/goutils/resource_lock"
 )
@@ -15,6 +16,8 @@ func init() {
 	driveDownCache = lrucache.Init("drivedown", 1000*1000, true)
 	lockStream = resource_lock.NewResourceLock(100 * 1000)
 	lockDown = resource_lock.NewResourceLock(100 * 1000)
+	gob.Register(DriveStreamInfo{})
+	gob.Register(DriveDownInfo{})
 }
 
 //get drive stream link with cache
@@ -23,13 +26,13 @@ func GetDriveStream(driveID string, accessToken string) DriveStreamInfo {
 	lockFile.Lock()
 	defer lockFile.Unlock()
 
-	var driveStreamInfo DriveStreamInfo
-	if isOK := driveStreamCache.GetCacheData("stream-"+driveID, &driveStreamInfo); isOK == true {
-		return driveStreamInfo
+	driveStreamInfo, isOK := driveStreamCache.GetCacheData("stream-" + driveID)
+	if isOK == true {
+		return driveStreamInfo.(DriveStreamInfo)
 	}
 	driveStreamInfo = StreamInfo(driveID, accessToken)
-	driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, driveStreamInfo.ExpireTime)
-	return driveStreamInfo
+	driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, driveStreamInfo.(DriveStreamInfo).ExpireTime)
+	return driveStreamInfo.(DriveStreamInfo)
 }
 
 //get drive download link with cache
@@ -38,21 +41,26 @@ func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
 	lockFile.Lock()
 	defer lockFile.Unlock()
 
-	var driveDownInfo DriveDownInfo
-	if isOK := driveDownCache.GetCacheData("down-"+driveID, &driveDownInfo); isOK == true {
-		return driveDownInfo
+	driveDownInfo, isOK := driveDownCache.GetCacheData("down-" + driveID)
+	if isOK == true {
+		return driveDownInfo.(DriveDownInfo)
 	}
 	driveDownInfo = DownloadInfo(driveID, accessToken)
-	driveDownCache.SaveCacheData("down-"+driveID, driveDownInfo, driveDownInfo.ExpireTime)
-	return driveDownInfo
+	driveDownCache.SaveCacheData("down-"+driveID, driveDownInfo, driveDownInfo.(DriveDownInfo).ExpireTime)
+	return driveDownInfo.(DriveDownInfo)
 }
 
 //get drive download link with cache
-func GetDriveDownloadLinkAsync(driveID string, accessToken string) DriveDownInfo {
-	var driveDownInfo DriveDownInfo
-	if isOK := driveDownCache.GetCacheData("down-"+driveID, &driveDownInfo); isOK == true {
-		return driveDownInfo
+func RemoveDriveStream(driveID string) {
+	driveDownCache.Remove("stream-" + driveID)
+}
+
+//get drive download link with cache
+func GetDriveDownloadLinkAsync(driveID string, accessToken string) {
+	_, isOK := driveDownCache.GetCacheData("down-" + driveID)
+	if isOK == true {
+		return
 	}
 	go GetDriveDownloadLink(driveID, accessToken)
-	return driveDownInfo
+	return
 }
