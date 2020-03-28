@@ -52,7 +52,7 @@ func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
 
 //get drive download link with cache
 func RemoveDriveStream(driveID string) {
-	driveDownCache.Remove("stream-" + driveID)
+	driveStreamCache.Remove("stream-" + driveID)
 }
 
 //get drive download link with cache

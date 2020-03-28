@@ -28,17 +28,19 @@ func TestCache_GetCacheData(t *testing.T) {
 	}
 
 	time1 := time.Now()
-	bb, isOK := cache.GetCacheData("1")
+	xxx := abc{}
+	bb, isOK := cache.GetCacheData("1", &xxx)
 	b := bb.(*abc)
 	fmt.Println(time.Since(time1).Seconds())
 	if isOK == true {
 		log.Println(b)
+		log.Println(xxx)
 	} else {
 		log.Println("Not in cache")
 	}
 
 	time2 := time.Now()
-	cc, isOK := cache.GetCacheData("1")
+	cc, isOK := cache.GetCacheData("1", &abc{})
 	c := cc.(*abc)
 	fmt.Println(time.Since(time2).Seconds())
 	if isOK == true {
