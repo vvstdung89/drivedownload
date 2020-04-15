@@ -49,11 +49,11 @@ func GetDriveStream(driveID string, accessToken string) DriveStreamInfo {
 
 //get drive stream link with cache
 func GetDriveRes(driveID string, accessToken string) (resArr []string) {
-	lockFile := lockStream.GetResourceLock("stream-" + driveID)
+	lockFile := lockStream.GetResourceLock("res-" + driveID)
 	lockFile.Lock()
 	defer lockFile.Unlock()
 
-	driveResInfo, isOK := driveResCache.GetCacheData("stream-" + driveID)
+	driveResInfo, isOK := driveResCache.GetCacheData("res-" + driveID)
 	if isOK == true {
 		return driveResInfo.([]string)
 	}
@@ -62,6 +62,7 @@ func GetDriveRes(driveID string, accessToken string) (resArr []string) {
 	for res, _ := range driveStreamInfo.Streams {
 		resArr = append(resArr, res)
 	}
+
 	driveResCache.SaveCacheData("res-"+driveID, resArr, 0)
 	return resArr
 }
