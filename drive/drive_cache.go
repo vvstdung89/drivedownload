@@ -10,14 +10,17 @@ var lockStream *resource_lock.Lock
 var lockDown *resource_lock.Lock
 var driveStreamCache *lrucache.Cache
 var driveDownCache *lrucache.Cache
+var driveResCache *lrucache.Cache
 
 func init() {
 	driveStreamCache = lrucache.Init("drivestream", 1000*1000, true)
+	driveResCache = lrucache.Init("driveresolution", 1000*1000, true)
 	driveDownCache = lrucache.Init("drivedown", 1000*1000, true)
-	lockStream = resource_lock.NewResourceLock(100 * 1000)
-	lockDown = resource_lock.NewResourceLock(100 * 1000)
+	lockStream = resource_lock.NewResourceLock(1000 * 1000)
+	lockDown = resource_lock.NewResourceLock(1000 * 1000)
 	gob.Register(DriveStreamInfo{})
 	gob.Register(DriveDownInfo{})
+	gob.Register([]string{})
 }
 
 //get drive stream link with cache
@@ -32,7 +35,35 @@ func GetDriveStream(driveID string, accessToken string) DriveStreamInfo {
 	}
 	driveStreamInfo = StreamInfo(driveID, accessToken)
 	driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, driveStreamInfo.(DriveStreamInfo).ExpireTime)
+
+	if len(driveStreamInfo.(DriveStreamInfo).Streams) > 0 {
+		resArr := []string{}
+		for res, _ := range driveStreamInfo.(DriveStreamInfo).Streams {
+			resArr = append(resArr, res)
+		}
+		driveResCache.SaveCacheData("res-"+driveID, resArr, 0)
+	}
+
 	return driveStreamInfo.(DriveStreamInfo)
+}
+
+//get drive stream link with cache
+func GetDriveRes(driveID string, accessToken string) (resArr []string) {
+	lockFile := lockStream.GetResourceLock("stream-" + driveID)
+	lockFile.Lock()
+	defer lockFile.Unlock()
+
+	driveResInfo, isOK := driveResCache.GetCacheData("stream-" + driveID)
+	if isOK == true {
+		return driveResInfo.([]string)
+	}
+
+	driveStreamInfo := GetDriveStream(driveID, accessToken)
+	for res, _ := range driveStreamInfo.Streams {
+		resArr = append(resArr, res)
+	}
+	driveResCache.SaveCacheData("res-"+driveID, resArr, 0)
+	return resArr
 }
 
 //get drive download link with cache
@@ -47,6 +78,7 @@ func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
 	}
 	driveDownInfo = DownloadInfo(driveID, accessToken)
 	driveDownCache.SaveCacheData("down-"+driveID, driveDownInfo, driveDownInfo.(DriveDownInfo).ExpireTime)
+
 	return driveDownInfo.(DriveDownInfo)
 }
 
