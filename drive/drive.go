@@ -2,6 +2,7 @@ package drive
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -103,18 +104,18 @@ func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 			//_url = re.ReplaceAllString(_url, `$1.drive.google.com`)
 			switch res {
 			case "18":
-				streamInfo["360"] = _url
+				streamInfo["360"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 				u, _ := url.Parse(_url)
 				query := u.Query()
 				createdTime, _ = strconv.ParseInt(query["lmt"][0], 10, 64)
 				createdTime = int64(math.Floor(float64(createdTime / 1000)))
 				expireTime, _ = strconv.ParseInt(query["expire"][0], 10, 64)
 			case "59":
-				streamInfo["480"] = _url
+				streamInfo["480"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 			case "22":
-				streamInfo["720"] = _url
+				streamInfo["720"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 			case "37":
-				streamInfo["1080"] = _url
+				streamInfo["1080"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 			}
 		}
 		driveStreamInfo = DriveStreamInfo{Cookie: string(drive_stream), Streams: streamInfo, CreatedTime: createdTime, ExpireTime: expireTime}
@@ -188,4 +189,28 @@ func CheckDownloadLink(driveID string) bool {
 
 	//return false only if no location
 	return false
+}
+
+func GetFinalRedirectUrl(link string, cookie string) (string, error) {
+	req, _ := http.NewRequest("HEAD", link, nil)
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	req.Header.Set("Cookie", cookie)
+	resp, err := client.Do(req)
+
+	if err == nil {
+		if resp == nil {
+			return link, errors.New("Empty response")
+		}
+		if resp.StatusCode == 302 {
+			return GetFinalRedirectUrl(resp.Header.Get("Location"), cookie)
+		} else if resp.StatusCode == 200 || resp.StatusCode == 206 {
+			return link, nil
+		}
+	}
+	return link, err
 }
