@@ -23,7 +23,7 @@ type Cache struct {
 
 func Init(name string, size int, persistent bool) *Cache {
 	lruCache, _ := lru.New(size)
-	lvdb, err := leveldb.OpenFile("levelDB-"+name, nil)
+	lvdb, err := leveldb.OpenFile("/data/levelDB-"+name, nil)
 	if err != nil {
 		panic(err)
 	}
