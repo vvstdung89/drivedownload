@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/vvstdung89/goutils/lrucache"
 	"github.com/vvstdung89/goutils/resource_lock"
+	"time"
 )
 
 var lockStream *resource_lock.Lock
@@ -95,7 +96,7 @@ func RemoveDriveStream(driveID string, expire int64) {
 		if !ok {
 			return
 		}
-		driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, expire)
+		driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, time.Now().Unix()+expire)
 	}
 
 }
