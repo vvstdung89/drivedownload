@@ -2,6 +2,7 @@ package drive
 
 import (
 	"encoding/gob"
+	"fmt"
 	"github.com/vvstdung89/goutils/lrucache"
 	"github.com/vvstdung89/goutils/resource_lock"
 	"time"
@@ -94,11 +95,15 @@ func RemoveDriveStream(driveID string, expire int64) {
 		defer lockFile.Unlock()
 		driveStreamInfo, ok := driveStreamCache.GetCacheData("stream-" + driveID)
 		if !ok {
+			fmt.Println("not in cache")
 			return
 		}
+		fmt.Println("remove with expire", driveStreamInfo.(DriveStreamInfo).ExpireTime, time.Now().Unix()+expire)
 		if driveStreamInfo.(DriveStreamInfo).ExpireTime > time.Now().Unix()+expire {
+			fmt.Println("save to cache")
 			driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, time.Now().Unix()+expire)
 		}
+
 	}
 
 }
