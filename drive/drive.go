@@ -105,17 +105,19 @@ func StreamInfo(driveID string, accessToken string) DriveStreamInfo {
 			switch res {
 			case "18":
 				streamInfo["360"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
-				u, _ := url.Parse(_url)
-				query := u.Query()
-				createdTime, _ = strconv.ParseInt(query["lmt"][0], 10, 64)
-				createdTime = int64(math.Floor(float64(createdTime / 1000)))
-				expireTime, _ = strconv.ParseInt(query["expire"][0], 10, 64)
 			case "59":
 				streamInfo["480"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 			case "22":
 				streamInfo["720"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
 			case "37":
 				streamInfo["1080"], _ = GetFinalRedirectUrl(_url, string(drive_stream))
+			}
+			if expireTime == 0 {
+				u, _ := url.Parse(_url)
+				query := u.Query()
+				createdTime, _ = strconv.ParseInt(query["lmt"][0], 10, 64)
+				createdTime = int64(math.Floor(float64(createdTime / 1000)))
+				expireTime, _ = strconv.ParseInt(query["expire"][0], 10, 64)
 			}
 		}
 		driveStreamInfo = DriveStreamInfo{Cookie: string(drive_stream), Streams: streamInfo, CreatedTime: createdTime, ExpireTime: expireTime}

@@ -96,7 +96,7 @@ func RemoveDriveStream(driveID string, expire int64) {
 		if !ok {
 			return
 		}
-		if driveStreamInfo.(DriveStreamInfo).ExpireTime > time.Now().Unix()+expire {
+		if driveStreamInfo.(DriveStreamInfo).ExpireTime == 0 || driveStreamInfo.(DriveStreamInfo).ExpireTime > time.Now().Unix()+expire {
 			driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, time.Now().Unix()+expire)
 		}
 	}
