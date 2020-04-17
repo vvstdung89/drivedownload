@@ -84,8 +84,20 @@ func GetDriveDownloadLink(driveID string, accessToken string) DriveDownInfo {
 }
 
 //get drive download link with cache
-func RemoveDriveStream(driveID string) {
-	driveStreamCache.Remove("stream-" + driveID)
+func RemoveDriveStream(driveID string, expire int64) {
+	if expire == 0 {
+		driveStreamCache.Remove("stream-" + driveID)
+	} else {
+		lockFile := lockStream.GetResourceLock("stream-" + driveID)
+		lockFile.Lock()
+		defer lockFile.Unlock()
+		driveStreamInfo, ok := driveStreamCache.GetCacheData("stream-" + driveID)
+		if !ok {
+			return
+		}
+		driveStreamCache.SaveCacheData("stream-"+driveID, driveStreamInfo, expire)
+	}
+
 }
 
 //get drive download link with cache
